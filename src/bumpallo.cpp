@@ -23,7 +23,7 @@ public:
       return nullptr;
     }
 
-    std::byte *block = &buffer_[loc_];
+    std::byte *block = &buffer_[aligned_loc];
     loc_ = next_loc;
 
     return static_cast<T *>(static_cast<void *>(block));

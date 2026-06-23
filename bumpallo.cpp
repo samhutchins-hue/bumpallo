@@ -12,16 +12,20 @@ public:
   BumpAllocator(std::size_t n)
       : capacity_{n}, buffer_{std::make_unique<std::byte[]>(n)}, loc_{0} {}
   template <typename T> T *allocate(std::size_t count = 1) {
+
+    std::size_t a = alignof(T);
     std::size_t bytes = count * sizeof(T);
-    std::size_t next_loc = loc_ + bytes;
+
+    std::size_t aligned_loc = (loc_ + a - 1) & ~(a - 1);
+    std::size_t next_loc = aligned_loc + bytes;
+
     if (next_loc > capacity_) {
       return nullptr;
     }
 
     std::byte *block = &buffer_[loc_];
-    std::size_t a = alignof(T);
-    std::size_t alligned_loc = (loc_ + a - 1) & ~(a - 1);
     loc_ = next_loc;
+
     return static_cast<T *>(static_cast<void *>(block));
   }
 
@@ -94,9 +98,21 @@ void test_overflow_allo_short() {
   assert(overflow == nullptr);
 }
 
+void align_test() {
+  BumpAllocator bmp{50};
+  std::byte *first_alloc_byte = bmp.allocate<std::byte>(1);
+  int *second_alloc_int = bmp.allocate<int>(1);
+
+  *second_alloc_int = 40;
+  (void)first_alloc_byte;
+
+  assert(reinterpret_cast<uintptr_t>(second_alloc_int) % alignof(int) == 0);
+}
+
 int main() {
   test_good_allo();
   test_overflow_allo();
   test_overflow_allo_int();
   test_overflow_allo_short();
+  align_test();
 }
